@@ -1,0 +1,29 @@
+name: Build Windows EXE
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Cari folder project (yang berisi package.json)
+        id: find
+        shell: bash
+        run: |
+          P=$(find . -name package.json -not -path "*/node_modules/*" | head -1)
+          if [ -z "$P" ]; then echo "package.json tidak ditemukan di repo"; exit 1; fi
+          D=$(dirname "$P"); echo "Project dir: $D"; echo "dir=$D" >> "$GITHUB_OUTPUT"
+      - name: Install
+        working-directory: ${{ steps.find.outputs.dir }}
+        run: npm install
+      - name: Build exe
+        working-directory: ${{ steps.find.outputs.dir }}
+        run: npx electron-builder --win portable --x64 --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RPG-Studio-exe
+          path: ${{ steps.find.outputs.dir }}/dist/*.exe
